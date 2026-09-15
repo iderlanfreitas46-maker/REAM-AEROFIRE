@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEROFIRE — R01 | Estudo Conceitual — Drone Aéreo para Apoio a Combate a Incêndio em Tanques</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg-0:#0a0d12;
+    --bg-1:#0f141c;
+    --bg-2:#151b25;
+    --line:#232c39;
+    --line-soft:#1a212c;
+    --txt-0:#e7edf5;
+    --txt-1:#a9b6c7;
+    --txt-2:#6b7688;
+    --water:#3aa0e0;
+    --foam:#6fd6c4;
+    --fire:#ff6a3d;
+    --fire-2:#ffb020;
+    --amber:#f2a93b;
+    --red:#e0524a;
+    --ok:#57c785;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    height:100%;
+    overflow:hidden;
+    background:var(--bg-0);
+    font-family:'Inter',sans-serif;
+    color:var(--txt-0);
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  #app{
+    height:100vh;
+    width:100vw;
+    display:flex;
+    flex-direction:column;
+    background:
+      radial-gradient(1200px 700px at 78% 8%, rgba(58,160,224,0.06), transparent 60%),
+      radial-gradient(900px 600px at 15% 95%, rgba(255,106,61,0.05), transparent 55%),
+      var(--bg-0);
+  }
+
+  /* ---------- HEADER ---------- */
+  header{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 22px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  }
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .brand .kicker{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.14em;
+    color:var(--txt-2);
+  }
+  .brand h1{
+    font-size:15.5px;
+    font-weight:600;
+    letter-spacing:.01em;
+    color:var(--txt-0);
+  }
+  .status-pill{
+    display:flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--amber);
+    border:1px solid rgba(242,169,59,0.35);
+    background:rgba(242,169,59,0.07);
+    padding:6px 12px;
+    border-radius:3px;
+    letter-spacing:.04em;
+  }
+  .status-pill .dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--amber);
+    box-shadow:0 0 8px var(--amber);
+    animation:blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  /* ---------- MAIN ---------- */
+  main{
+    flex:1 1 auto;
+    display:grid;
+    grid-template-columns:1.28fr 1fr;
+    min-height:0;
+  }
+
+  /* ----- STAGE (left) ----- */
+  #stage-wrap{
+    position:relative;
+    border-right:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  #stage{
+    flex:1 1 auto;
+    min-height:0;
+    background:linear-gradient(180deg, #bfe3f7 0%, #d8edf9 38%, #eef6f9 68%, #f4efe4 100%);
+  }
+  #stage svg{width:100%; height:100%; display:block;}
+
+  .phase-bar{
+    flex:0 0 auto;
+    display:flex;
+    border-top:1px solid var(--line);
+    background:var(--bg-1);
+  }
+  .phase-seg{
+    flex:1;
+    padding:9px 6px 10px;
+    text-align:center;
+    border-right:1px solid var(--line-soft);
+    cursor:default;
+    position:relative;
+  }
+  .phase-seg:last-child{border-right:none;}
+  .phase-seg .num{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;
+    color:var(--txt-2);
+    display:block;
+  }
+  .phase-seg .track{
+    height:2px;
+    background:var(--line);
+    margin-top:6px;
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .phase-seg .track i{
+    display:block;
+    height:100%;
+    width:0%;
+    background:var(--water);
+    transition:width linear;
+  }
+  .phase-seg.active .num{color:var(--txt-0);}
+  .phase-seg.done .track i{width:100% !important; transition:none;}
+
+  /* ----- DATA PANEL (right) ----- */
+  #panel{
+    padding:20px 26px 16px;
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    overflow:hidden;
+  }
+  .panel-head{flex:0 0 auto; margin-bottom:14px;}
+  .panel-head .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    color:var(--water);
+    letter-spacing:.1em;
+    margin-bottom:6px;
+  }
+  .panel-head h2{
+    font-size:21px;
+    font-weight:700;
+    color:var(--txt-0);
+    line-height:1.25;
+  }
+  .panel-head p.sub{
+    margin-top:7px;
+    font-size:13px;
+    color:var(--txt-1);
+    line-height:1.5;
+    max-width:52ch;
+  }
+
+  .req-grid{
+    flex:1 1 auto;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    gap:9px;
+    overflow:hidden;
+  }
+  .req-row{
+    display:grid;
+    grid-template-columns:118px 1fr;
+    gap:14px;
+    padding:9px 0;
+    border-top:1px solid var(--line-soft);
+    align-items:baseline;
+  }
+  .req-row .k{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--txt-2);
+    letter-spacing:.02em;
+  }
+  .req-row .v{
+    font-size:12.8px;
+    color:var(--txt-1);
+    line-height:1.48;
+  }
+  .req-row .v b{color:var(--txt-0); font-weight:600;}
+
+  .callout{
+    flex:0 0 auto;
+    margin-top:10px;
+    padding:9px 12px;
+    border-radius:4px;
+    font-size:11.8px;
+    line-height:1.5;
+    border-left:3px solid var(--red);
+    background:rgba(224,82,74,0.07);
+    color:var(--txt-1);
+  }
+  .callout b{color:var(--red);}
+  .callout.ok{border-left-color:var(--ok); background:rgba(87,199,133,0.07);}
+  .callout.ok b{color:var(--ok);}
+
+  /* ---------- FOOTER ---------- */
+  footer{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:9px 22px;
+    border-top:1px solid var(--line);
+    background:var(--bg-1);
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    color:var(--txt-2);
+    letter-spacing:.03em;
+  }
+  footer .warn{color:var(--red); font-weight:600;}
+
+  /* ---------- SVG helpers ---------- */
+  .label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;
+    fill:#3d4c5e;
+    letter-spacing:.03em;
+  }
+  .label-hi{fill:#101820;}
+  .rig{fill:#e7edf2; stroke:#8fa0b2; stroke-width:1;}
+  .rig-active{stroke:var(--water); stroke-width:1.8;}
+  .hose{
+    fill:none; stroke:#5b6b7d; stroke-width:6; stroke-linecap:round;
+    transition:d .05s linear;
+  }
+  .hose-flow{
+    fill:none; stroke:#2f8fd4; stroke-width:2.6; stroke-linecap:round;
+    stroke-dasharray:6 10;
+    animation:flow 1s linear infinite;
+    opacity:0;
+    transition:opacity .5s ease;
+  }
+  @keyframes flow{to{stroke-dashoffset:-32;}}
+  .drone-group{ /* position now driven entirely by JS (tween), no CSS transition */ }
+  .rotor{
+    transform-origin:center;
+    animation:spin .16s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .flame{transform-origin:bottom center; animation:flicker 0.9s ease-in-out infinite alternate;}
+  @keyframes flicker{
+    0%{transform:scaleY(1) translateX(0);}
+    100%{transform:scaleY(1.12) translateX(1.5px);}
+  }
+  .flame2{animation-duration:1.15s;}
+  .flame3{animation-duration:0.75s;}
+  .fire-group{transition:opacity 1.8s ease;}
+  .foam-particle{
+    opacity:0;
+    transition:opacity .4s ease;
+  }
+
+  /* smoke rising from fire */
+  .smoke-group{transition:opacity 1.8s ease;}
+  .smoke{
+    fill:#7c8a97;
+    opacity:.55;
+    animation:rise 4.5s ease-in infinite;
+    transform-box:fill-box;
+    transform-origin:center;
+  }
+  .smoke.s2{animation-delay:-1.5s;}
+  .smoke.s3{animation-delay:-3s;}
+  .smoke.s4{animation-delay:-0.7s;}
+  @keyframes rise{
+    0%{ transform:translate(0,0) scale(.5); opacity:0; }
+    12%{ opacity:.5; }
+    100%{ transform:translate(14px,-190px) scale(2.6); opacity:0; }
+  }
+
+  /* beacon lights on drone */
+  .beacon{ animation:beacon-blink 1.1s ease-in-out infinite; }
+  .beacon.green{ animation-delay:.55s; }
+  @keyframes beacon-blink{
+    0%,78%{ opacity:.25; }
+    88%{ opacity:1; }
+    100%{ opacity:.25; }
+  }
+  .beam{
+    opacity:0;
+    transition:opacity .5s ease;
+    animation:beam-flow .5s linear infinite;
+  }
+  @keyframes beam-flow{ to{ stroke-dashoffset:-20; } }
+
+  /* droplets travelling along the jet, from bocal to the tank —
+     visibility is controlled by #droplet-group's opacity (JS);
+     each droplet's own fade in/out below is just its travel cycle */
+  .droplet{
+    offset-rotate:0deg;
+    animation:droplet-travel 0.7s linear infinite;
+  }
+  .droplet.d2{ animation-delay:.23s; }
+  .droplet.d3{ animation-delay:.46s; }
+  @keyframes droplet-travel{
+    0%{ offset-distance:0%; opacity:0; }
+    8%{ opacity:1; }
+    92%{ opacity:1; }
+    100%{ offset-distance:100%; opacity:0; }
+  }
+  .glow-pt{opacity:0; transition:opacity .5s ease;}
+
+  /* foam crest bubbling gently at the surface as it rises in the tank */
+  .crest-bubble{ opacity:.88; animation:bob 2.4s ease-in-out infinite; transition:cy .5s ease; }
+  .crest-bubble.cb2{animation-delay:-.4s;}
+  .crest-bubble.cb3{animation-delay:-.9s;}
+  .crest-bubble.cb4{animation-delay:-1.3s;}
+  .crest-bubble.cb5{animation-delay:-.2s;}
+  .crest-bubble.cb6{animation-delay:-1.7s;}
+  .crest-bubble.cb7{animation-delay:-.6s;}
+  .crest-bubble.cb8{animation-delay:-2.1s;}
+  @keyframes bob{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-3px); } }
+  #foam-clip-rect{ transition:y 1.4s ease, height 1.4s ease; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <header>
+    <div class="brand">
+      <span class="mono" style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#ff7a33;">AEROFIRE — R01</span>
+      <span class="kicker mono">ESTUDO CONCEITUAL · ENGENHARIA</span>
+      <h1>Drone Aéreo Remotamente Operado — Apoio ao Combate a Incêndio em Tanques com Espuma LGE</h1>
+    </div>
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button id="sound-toggle" class="status-pill" type="button" style="cursor:pointer; background:rgba(58,160,224,0.09); border-color:rgba(58,160,224,0.35); color:var(--water);">
+        <span class="dot" style="background:var(--water); box-shadow:0 0 8px var(--water);"></span>SOM DO DRONE: DESLIGADO
+      </button>
+      <div class="status-pill"><span class="dot"></span>NÃO CERTIFICADO — NÃO SUBSTITUI SISTEMA FIXO</div>
+    </div>
+  </header>
+
+  <main>
+    <div id="stage-wrap">
+      <div id="stage">
+        <svg viewBox="0 0 900 560" preserveAspectRatio="xMidYMid meet">
+
+          <defs>
+            <pattern id="foamBubbles" width="16" height="16" patternUnits="userSpaceOnUse">
+              <circle cx="4" cy="5" r="2.2" fill="#ffffff" opacity="0.55"/>
+              <circle cx="11" cy="10" r="2.6" fill="#ffffff" opacity="0.4"/>
+              <circle cx="8" cy="2" r="1.6" fill="#ffffff" opacity="0.5"/>
+              <circle cx="13" cy="13" r="1.3" fill="#eafcf7" opacity="0.6"/>
+              <circle cx="2" cy="12" r="1.8" fill="#eafcf7" opacity="0.45"/>
+            </pattern>
+          </defs>
+
+          <!-- ground -->
+          <line x1="0" y1="470" x2="900" y2="470" stroke="#5c6f82" stroke-width="1.4"/>
+
+          <!-- ===== SISTEMA TERRESTRE ===== -->
+          <g id="rig">
+            <!-- water tank -->
+            <rect id="rig-water" class="rig" x="40" y="380" width="70" height="90" rx="3"/>
+            <text x="75" y="403" text-anchor="middle" class="label">ÁGUA</text>
+            <rect x="48" y="412" width="54" height="50" fill="var(--water)" opacity="0.28"/>
+
+            <!-- LGE tank -->
+            <rect id="rig-lge" class="rig" x="118" y="395" width="46" height="75" rx="3"/>
+            <text x="141" y="415" text-anchor="middle" class="label">LGE</text>
+            <rect x="124" y="424" width="34" height="38" fill="var(--foam)" opacity="0.3"/>
+
+            <!-- pump + proportioner -->
+            <rect id="rig-pump" class="rig" x="172" y="410" width="86" height="60" rx="3"/>
+            <text x="215" y="432" text-anchor="middle" class="label">BOMBA +</text>
+            <text x="215" y="444" text-anchor="middle" class="label">PROPORCIONADOR</text>
+            <circle cx="192" cy="456" r="6" fill="none" stroke="var(--txt-2)" stroke-width="1.4"/>
+            <circle cx="238" cy="456" r="6" fill="none" stroke="var(--txt-2)" stroke-width="1.4"/>
+
+            <!-- instrumentation -->
+            <rect id="rig-instr" class="rig" x="266" y="424" width="52" height="46" rx="3"/>
+            <text x="292" y="444" text-anchor="middle" class="label">P / Q</text>
+            <text x="292" y="456" text-anchor="middle" class="label">INSTR.</text>
+          </g>
+
+          <!-- hose from rig to drone -->
+          <path id="hose-path" class="hose" d="M 258,438 C 340,438 380,300 420,190"/>
+          <path id="hose-flow" class="hose-flow" d="M 258,438 C 340,438 380,300 420,190"/>
+
+          <!-- ===== TANQUE ===== -->
+          <g id="tank-group">
+            <ellipse cx="740" cy="466" rx="110" ry="14" fill="#0d1219"/>
+            <rect x="640" y="360" width="200" height="106" fill="#232c39" stroke="#2e3948" stroke-width="1.5"/>
+            <ellipse cx="740" cy="360" rx="100" ry="14" fill="#2a3542" stroke="#3a4759" stroke-width="1.5"/>
+            <text x="740" y="418" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="15" font-weight="700" fill="#e7edf5" letter-spacing="1">TQ-OC</text>
+            <text x="740" y="490" text-anchor="middle" class="label">TQ-OC — ARMAZENAMENTO DE ÓLEO COMBUSTÍVEL</text>
+
+            <!-- flames -->
+            <g id="fire-group" class="fire-group">
+              <path class="flame" d="M700,360 C692,330 706,314 700,290 C716,306 720,330 710,349 C716,341 722,328 720,314 C732,338 726,362 712,362 Z" fill="var(--fire)"/>
+              <path class="flame flame2" d="M738,360 C728,322 746,303 738,274 C758,293 762,322 748,347 C756,336 764,320 760,303 C776,333 768,362 750,362 Z" fill="var(--fire-2)"/>
+              <path class="flame flame3" d="M776,360 C768,333 780,320 774,298 C788,311 792,333 782,349 C788,341 792,330 790,320 C800,341 796,362 784,362 Z" fill="var(--fire)"/>
+            </g>
+
+            <!-- smoke rising from the fire -->
+            <g id="smoke-group" class="smoke-group">
+              <ellipse class="smoke s1" cx="706" cy="278" rx="16" ry="12"/>
+              <ellipse class="smoke s2" cx="736" cy="264" rx="20" ry="14"/>
+              <ellipse class="smoke s3" cx="766" cy="272" rx="15" ry="11"/>
+              <ellipse class="smoke s4" cx="722" cy="252" rx="12" ry="9"/>
+            </g>
+
+            <!-- foam building up inside the tank, with bubble texture -->
+            <clipPath id="foamClip">
+              <rect id="foam-clip-rect" x="642" y="466" width="196" height="0"/>
+            </clipPath>
+            <g clip-path="url(#foamClip)">
+              <rect x="642" y="352" width="196" height="114" fill="var(--foam)" opacity="0.55"/>
+              <rect x="642" y="352" width="196" height="114" fill="url(#foamBubbles)"/>
+            </g>
+            <g id="foam-crest-group" style="opacity:0; transition:opacity .4s ease;">
+              <circle class="crest-bubble cb1" cx="655" r="5" fill="#ffffff"/>
+              <circle class="crest-bubble cb2" cx="678" r="6.5" fill="#eafcf7"/>
+              <circle class="crest-bubble cb3" cx="702" r="4.5" fill="#ffffff"/>
+              <circle class="crest-bubble cb4" cx="730" r="7" fill="#eafcf7"/>
+              <circle class="crest-bubble cb5" cx="758" r="5.5" fill="#ffffff"/>
+              <circle class="crest-bubble cb6" cx="782" r="6" fill="#eafcf7"/>
+              <circle class="crest-bubble cb7" cx="808" r="4.5" fill="#ffffff"/>
+              <circle class="crest-bubble cb8" cx="828" r="5" fill="#eafcf7"/>
+            </g>
+          </g>
+
+          <!-- ===== DRONE ===== -->
+          <g id="drone-group" class="drone-group" transform="translate(430,430) scale(1.65)">
+            <!-- arms -->
+            <line x1="-34" y1="-10" x2="34" y2="-10" stroke="#25313f" stroke-width="3.4"/>
+            <line x1="-34" y1="-10" x2="-46" y2="-24" stroke="#25313f" stroke-width="3.4"/>
+            <line x1="34" y1="-10" x2="46" y2="-24" stroke="#25313f" stroke-width="3.4"/>
+            <line x1="-34" y1="-10" x2="-46" y2="4" stroke="#25313f" stroke-width="3.4"/>
+            <line x1="34" y1="-10" x2="46" y2="4" stroke="#25313f" stroke-width="3.4"/>
+
+            <!-- rotors -->
+            <g class="rotor" transform="translate(-46,-24)"><ellipse rx="17" ry="3.6" fill="#5b6b7d" opacity="0.85"/></g>
+            <g class="rotor" transform="translate(46,-24)"><ellipse rx="17" ry="3.6" fill="#5b6b7d" opacity="0.85"/></g>
+            <g class="rotor" transform="translate(-46,4)"><ellipse rx="17" ry="3.6" fill="#5b6b7d" opacity="0.85"/></g>
+            <g class="rotor" transform="translate(46,4)"><ellipse rx="17" ry="3.6" fill="#5b6b7d" opacity="0.85"/></g>
+
+            <!-- anti-collision beacons -->
+            <circle cx="-46" cy="-24" r="2.6" fill="#e0524a" class="beacon"/>
+            <circle cx="46" cy="4" r="2.6" fill="#57c785" class="beacon green"/>
+
+            <!-- body: safety-orange shell with navy trim -->
+            <rect x="-23" y="-17" width="46" height="22" rx="6" fill="#ff7a33" stroke="#1f2a36" stroke-width="1.6"/>
+            <rect x="-23" y="-17" width="46" height="8" rx="4" fill="#ffb020" opacity="0.9"/>
+            <text x="0" y="-1.5" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="5.6" font-weight="700" fill="#1f2a36" letter-spacing="0.3">AEROFIRE R01</text>
+
+            <!-- hose clamp / attachment point (top-rear of body) -->
+            <circle id="hose-anchor" cx="-27" cy="-13" r="4.4" fill="#2f8fd4" stroke="#1f2a36" stroke-width="1.4"/>
+
+            <!-- camera / thermal gimbal -->
+            <circle cx="0" cy="8" r="6.2" fill="#1f2a36"/>
+            <circle cx="0" cy="8" r="3.6" fill="#2f8fd4" class="glow-pt" id="cam-glow"/>
+
+            <!-- payload arm to monitor/bocal -->
+            <line x1="0" y1="14" x2="0" y2="30" stroke="#25313f" stroke-width="2.6"/>
+            <rect x="-9" y="28" width="18" height="12" rx="2" fill="#c7d0d9" stroke="#25313f" stroke-width="1.2"/>
+            <circle cx="0" cy="34" r="2.2" fill="#ff7a33"/>
+
+            <!-- foam beam -->
+            <path id="beam" class="beam" d="M0,40 C 22,58 38,78 50,97" fill="none" stroke="var(--foam)" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="3 7"/>
+            <g id="droplet-group" style="opacity:0; transition:opacity .4s ease;">
+              <circle class="droplet" r="3.2" fill="#eafcf7" style="offset-path:path('M0,40 C 22,58 38,78 50,97');"></circle>
+              <circle class="droplet d2" r="2.7" fill="#eafcf7" style="offset-path:path('M0,40 C 22,58 38,78 50,97');"></circle>
+              <circle class="droplet d3" r="2.2" fill="#eafcf7" style="offset-path:path('M0,40 C 22,58 38,78 50,97');"></circle>
+            </g>
+          </g>
+
+          <!-- telemetry link (drone <-> operator icon top-left) -->
+          <g id="comm-link" opacity="0">
+            <text x="860" y="40" text-anchor="end" class="label">AEROFIRE-R01 · TELEMETRIA</text>
+            <circle cx="860" cy="52" r="3" fill="var(--ok)"/>
+          </g>
+
+        </svg>
+      </div>
+
+      <div class="phase-bar" id="phase-bar"></div>
+    </div>
+
+    <div id="panel">
+      <div class="panel-head">
+        <div class="eyebrow mono" id="p-eyebrow">FASE 1 / 8</div>
+        <h2 id="p-title">Sistema Terrestre</h2>
+        <p class="sub" id="p-sub"></p>
+      </div>
+      <div class="req-grid" id="p-grid"></div>
+      <div class="callout" id="p-callout"></div>
+    </div>
+  </main>
+
+  <footer>
+    <span>AEROFIRE — R01 · SIMULAÇÃO CONCEITUAL AUTO-EXECUTÁVEL</span>
+    <span>Iderlan Freitas · Engenheiro Eletricista</span>
+    <span class="warn">ESTUDO PRELIMINAR — NÃO É PROJETO EXECUTIVO NEM EQUIPAMENTO HOMOLOGADO</span>
+  </footer>
+
+</div>
+
+<script>
+const PHASES = [
+  {
+    key:'rig',
+    eyebrow:'FASE 1 / 8 — 0 A 8s',
+    title:'Sistema Terrestre',
+    sub:'A água, o LGE, a pressão e a vazão permanecem no solo. O drone nunca carrega o volume do agente extintor — apenas o transporta em trânsito, pela mangueira.',
+    rows:[
+      ['Água', '<b>Reservatório dedicado ou hidrante</b>, independente do sistema fixo do tanque.'],
+      ['LGE', 'Tanque de <b>líquido gerador de espuma</b> com proporcionador em linha (2–6%).'],
+      ['Bombeamento', 'Bomba de <b>pressão e vazão ajustáveis</b> conforme perda de carga na mangueira suspensa.'],
+      ['Instrumentação', 'Medição de <b>pressão e vazão</b> em tempo real, transmitida à estação de operação.'],
+    ],
+    callout:{ok:false, html:'<b>Premissa central:</b> o drone é plataforma de posicionamento, não reservatório — isso reduz peso de decolagem e amplia autonomia.'},
+    drone:{x:200, y:430, cam:false, beam:false, hoseFlow:false, rig:true, fire:'full', foam:0},
+  },
+  {
+    key:'takeoff',
+    eyebrow:'FASE 2 / 8 — 8 A 16s',
+    title:'Requisitos do Drone',
+    sub:'Plataforma de grande capacidade de sustentação, dimensionada para o peso da mangueira e do conjunto de aplicação — não do líquido extintor.',
+    rows:[
+      ['Sustentação', '<b>Carga útil típica-alvo:</b> 15–40 kg (mangueira + bocal + sensores), a validar em protótipo.'],
+      ['Configuração', 'Multirrotor de <b>múltiplos motores redundantes</b> (hexa/octa) para tolerância a falha.'],
+      ['Autonomia', 'Foco em <b>tempo de plantio</b> sobre o alvo, não em voo de longa distância.'],
+      ['Certificação', 'Operação como <b>RPAS classe especial</b>, sujeita a ANAC/DECEA para uso próximo a instalação industrial.'],
+    ],
+    callout:{ok:false, html:'<b>Risco:</b> resposta a rajada de vento sob calor radiante do incêndio ainda não caracterizada — item crítico de estudo.'},
+    drone:{x:340, y:250, cam:true, beam:false, hoseFlow:true, rig:true, fire:'full', foam:0},
+  },
+  {
+    key:'hose',
+    eyebrow:'FASE 3 / 8 — 16 A 24s',
+    title:'Requisitos da Mangueira',
+    sub:'Elo físico entre o sistema terrestre e o drone. Define grande parte do peso suspenso e da dinâmica de voo.',
+    rows:[
+      ['Peso linear', '<b>Mangueira leve de baixo peso/metro</b> — determinante para o payload disponível.'],
+      ['Comprimento', 'Definido pela <b>distância mínima de segurança</b> entre operador/rig e o tanque em chamas.'],
+      ['Flexibilidade', 'Raio de curvatura compatível com <b>manobras do drone sem dobra ou estrangulamento</b>.'],
+      ['Conexão', 'Engate rápido e <b>desconexão de emergência</b> em caso de perda de controle do drone.'],
+    ],
+    callout:{ok:false, html:'<b>Limitação central do conceito:</b> a mangueira suspensa é o principal fator limitante de alcance e manobrabilidade — não o drone em si.'},
+    drone:{x:430, y:190, cam:true, beam:false, hoseFlow:true, rig:true, fire:'full', foam:0},
+  },
+  {
+    key:'nav',
+    eyebrow:'FASE 4 / 8 — 24 A 32s',
+    title:'Navegação, Câmeras e Sensores',
+    sub:'Posicionamento remoto preciso sobre o tanque, com percepção térmica e visual para o operador em local seguro.',
+    rows:[
+      ['Câmera RGB', 'Visão direta para <b>pilotagem e enquadramento</b> do jato de espuma.'],
+      ['Câmera térmica', 'Identificação de <b>pontos quentes e progressão do incêndio</b> através da fumaça.'],
+      ['Navegação', 'GNSS + <b>posicionamento relativo ao tanque</b>, com hold de posição sob vento.'],
+      ['Sensores', 'Anemômetro embarcado e <b>sensor de temperatura ambiente</b> para limites operacionais.'],
+    ],
+    callout:{ok:true, html:'<b>Ganho de segurança:</b> operador permanece afastado do raio térmico, controlando o posicionamento por telemetria.'},
+    drone:{x:560, y:150, cam:true, beam:false, hoseFlow:true, rig:true, fire:'full', foam:0},
+  },
+  {
+    key:'foam',
+    eyebrow:'FASE 5 / 8 — 32 A 44s',
+    title:'Sistema de Aplicação de Espuma',
+    sub:'Monitor ou bocal leve embarcado, alimentado pela pressão gerada no solo — o drone apenas mira.',
+    rows:[
+      ['Bocal/monitor', 'Compacto, <b>leve, com ajuste de alcance e padrão de jato</b> por telemetria.'],
+      ['Vazão de projeto', 'Dimensionada em conjunto com a <b>bomba terrestre</b>, não pelo drone.'],
+      ['Proporcionamento', 'LGE dosado <b>no solo</b>, antes da mangueira — bocal aplica pré-misturado.'],
+      ['Orientação', 'Atuadores de <b>pan/tilt</b> no bocal para mirar sem reposicionar todo o drone.'],
+    ],
+    callout:{ok:true, html:'<b>Resultado esperado:</b> aplicação direcionada de espuma sobre o topo do tanque, reduzindo exposição de brigadistas.'},
+    drone:{x:660, y:210, cam:true, beam:true, hoseFlow:true, rig:true, fire:'reducing', foam:60},
+  },
+  {
+    key:'comm',
+    eyebrow:'FASE 6 / 8 — 44 A 50s',
+    title:'Comunicação, Controle e Estação de Operação',
+    sub:'Enlace redundante entre drone, sistema terrestre e operador — item crítico em ambiente com fumaça e interferência térmica.',
+    rows:[
+      ['Enlace de comando', 'RF dedicado com <b>redundância</b> (link secundário) em caso de perda de sinal.'],
+      ['Telemetria', 'Pressão, vazão, posição, vento e <b>imagem térmica</b> em tempo real na estação.'],
+      ['Estação de operação', 'Console remoto, <b>fora do raio de irradiação térmica</b> do tanque.'],
+      ['Falha de enlace', 'Procedimento de <b>retorno automático e liberação segura</b> da mangueira.'],
+    ],
+    callout:{ok:false, html:'<b>Risco crítico:</b> perda de enlace sobre o tanque exige lógica de failsafe que não comprometa a integridade da mangueira nem do drone.'},
+    drone:{x:660, y:210, cam:true, beam:true, hoseFlow:true, rig:true, fire:'low', foam:85},
+  },
+  {
+    key:'risks',
+    eyebrow:'FASE 7 / 8 — 50 A 56s',
+    title:'Riscos e Limitações Identificadas',
+    sub:'Este é um estudo conceitual: os pontos abaixo são justamente o que um futuro protótipo precisa validar.',
+    rows:[
+      ['Térmico', 'Efeito da <b>pluma de calor e fumaça</b> sobre motores, sensores e estrutura do drone.'],
+      ['Aerodinâmico', 'Peso e arrasto da <b>mangueira suspensa</b> sob vento e correntes convectivas do incêndio.'],
+      ['Regulatório', 'Operação de RPAS <b>próxima a instalação classificada</b> (área de risco de explosão).'],
+      ['Escopo', 'Sistema é <b>complementar</b>, não substitui rede fixa de resfriamento e combate existente.'],
+    ],
+    callout:{ok:false, html:'<b>Importante:</b> não deve ser apresentado como equipamento certificado ou pronto para operação industrial.'},
+    drone:{x:660, y:210, cam:true, beam:false, hoseFlow:false, rig:true, fire:'low', foam:85},
+  },
+  {
+    key:'next',
+    eyebrow:'FASE 8 / 8 — 56 A 62s',
+    title:'Próximos Passos — Rumo ao Protótipo',
+    sub:'Sequência sugerida para amadurecer o conceito além do estudo preliminar.',
+    rows:[
+      ['Etapa 1', 'Ensaios de <b>bancada</b>: peso/metro da mangueira vs. payload disponível do drone.'],
+      ['Etapa 2', 'Voo cativo com <b>mangueira simulada</b>, sem calor, para caracterizar dinâmica de voo.'],
+      ['Etapa 3', 'Ensaio de <b>aplicação de água</b> em alvo estático, sem fogo, validando bocal e mira.'],
+      ['Etapa 4', 'Ensaio controlado com <b>calor radiante simulado</b>, com brigada e protocolo de emergência.'],
+    ],
+    callout:{ok:true, html:'<b>Objetivo do protótipo:</b> transformar as premissas deste estudo em dados mensuráveis de viabilidade.'},
+    drone:{x:420, y:430, cam:false, beam:false, hoseFlow:false, rig:true, fire:'low', foam:85},
+  },
+];
+
+const PHASE_MS = [8000,8000,8000,8000,12000,6000,6000,6000];
+
+// ---- build phase bar ----
+const bar = document.getElementById('phase-bar');
+PHASES.forEach((p,i)=>{
+  const seg = document.createElement('div');
+  seg.className='phase-seg';
+  seg.innerHTML = `<span class="num mono">0${i+1}</span><div class="track"><i></i></div>`;
+  bar.appendChild(seg);
+});
+const segs = [...bar.children];
+
+// ---- SVG refs ----
+const droneGroup = document.getElementById('drone-group');
+const hosePath = document.getElementById('hose-path');
+const hoseFlow = document.getElementById('hose-flow');
+const camGlow = document.getElementById('cam-glow');
+const beam = document.getElementById('beam');
+const dropletGroup = document.getElementById('droplet-group');
+const fireGroup = document.getElementById('fire-group');
+const smokeGroup = document.getElementById('smoke-group');
+const foamClipRect = document.getElementById('foam-clip-rect');
+const foamCrestGroup = document.getElementById('foam-crest-group');
+const crestBubbles = document.querySelectorAll('.crest-bubble');
+const commLink = document.getElementById('comm-link');
+const rigEls = ['rig-water','rig-lge','rig-pump','rig-instr'].map(id=>document.getElementById(id));
+
+// ---------------- DRONE ENGINE SOUND (Web Audio, muted until the user opts in) ----------------
+let audioCtx = null, engineGain = null, soundOn = false, engineTargetVolume = 0.05;
+const soundToggle = document.getElementById('sound-toggle');
+
+function buildEngine(){
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const osc1 = audioCtx.createOscillator(); osc1.type='sawtooth'; osc1.frequency.value=128;
+  const osc2 = audioCtx.createOscillator(); osc2.type='sawtooth'; osc2.frequency.value=134.5;
+  const lp = audioCtx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=850;
+  engineGain = audioCtx.createGain(); engineGain.gain.value = 0;
+  osc1.connect(lp); osc2.connect(lp); lp.connect(engineGain); engineGain.connect(audioCtx.destination);
+  osc1.start(); osc2.start();
+  // subtle rotor "flutter" — a slow LFO riding on the gain
+  const lfo = audioCtx.createOscillator(); lfo.frequency.value = 7.5;
+  const lfoGain = audioCtx.createGain(); lfoGain.gain.value = 0.012;
+  lfo.connect(lfoGain); lfoGain.connect(engineGain.gain);
+  lfo.start();
+}
+
+function applyEngineVolume(){
+  if(!audioCtx) return;
+  const now = audioCtx.currentTime;
+  engineGain.gain.cancelScheduledValues(now);
+  engineGain.gain.setTargetAtTime(soundOn ? engineTargetVolume : 0, now, 0.35);
+}
+function setEngineVolume(v){ engineTargetVolume = v; applyEngineVolume(); }
+
+soundToggle.addEventListener('click', ()=>{
+  if(!audioCtx) buildEngine();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  soundOn = !soundOn;
+  soundToggle.innerHTML = soundOn
+    ? '<span class="dot" style="background:var(--ok); box-shadow:0 0 8px var(--ok);"></span>SOM DO DRONE: LIGADO'
+    : '<span class="dot" style="background:var(--water); box-shadow:0 0 8px var(--water);"></span>SOM DO DRONE: DESLIGADO';
+  applyEngineVolume();
+});
+
+
+const DRONE_SCALE = 1.65;
+const HOSE_ANCHOR_LOCAL = { x:-27, y:-13 }; // clamp position in drone-local coords
+const RIG_OUT = { x:258, y:438 };           // hose outlet at the ground rig
+
+function hoseD(ax, ay){
+  const c1x = RIG_OUT.x + (ax-RIG_OUT.x)*0.38, c1y = RIG_OUT.y;
+  const c2x = ax - (ax-RIG_OUT.x)*0.22,        c2y = ay + (RIG_OUT.y-ay)*0.18;
+  return `M ${RIG_OUT.x},${RIG_OUT.y} C ${c1x},${c1y} ${c2x},${c2y} ${ax},${ay}`;
+}
+
+// sets the drone AND the hose from the exact same (x,y) in the same call,
+// so they can never fall out of sync — no reliance on reading the drone's
+// rendered position back out of the DOM mid-animation.
+function setDronePosition(x, y){
+  droneGroup.setAttribute('transform', `translate(${x},${y}) scale(${DRONE_SCALE})`);
+  const ax = x + HOSE_ANCHOR_LOCAL.x*DRONE_SCALE;
+  const ay = y + HOSE_ANCHOR_LOCAL.y*DRONE_SCALE;
+  const d = hoseD(ax, ay);
+  hosePath.setAttribute('d', d);
+  hoseFlow.setAttribute('d', d);
+}
+
+function easeInOutCubic(t){ return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
+
+let droneX = PHASES[0].drone.x, droneY = PHASES[0].drone.y;
+let flightToken = 0;
+function flyDroneTo(x, y, duration){
+  const token = ++flightToken; // cancels any flight already in progress
+  const startX = droneX, startY = droneY, startTime = performance.now();
+  function frame(now){
+    if(token !== flightToken) return; // superseded by a newer flight
+    const t = Math.min(1, (now-startTime)/duration);
+    const e = easeInOutCubic(t);
+    droneX = startX + (x-startX)*e;
+    droneY = startY + (y-startY)*e;
+    setDronePosition(droneX, droneY);
+    if(t < 1) requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+function applyPhase(p, idx){
+  flyDroneTo(p.drone.x, p.drone.y, 1900);
+
+  // engine hum: quieter while parked at the rig, fuller while airborne
+  const airborne = p.drone.y < 400;
+  setEngineVolume(airborne ? 0.17 : 0.05);
+
+  camGlow.style.opacity = p.drone.cam ? 1 : 0;
+  beam.style.opacity = p.drone.beam ? 1 : 0;
+  dropletGroup.style.opacity = p.drone.beam ? 1 : 0;
+  hoseFlow.style.opacity = p.drone.hoseFlow ? 1 : 0;
+  commLink.style.opacity = (idx>=1) ? 1 : 0;
+
+  rigEls.forEach(el=>el.classList.toggle('rig-active', p.drone.rig));
+
+  if(p.drone.fire==='full'){ fireGroup.style.opacity = 1; smokeGroup.style.opacity = 0.9; }
+  else if(p.drone.fire==='reducing'){ fireGroup.style.opacity = 0.6; smokeGroup.style.opacity = 0.7; }
+  else if(p.drone.fire==='low'){ fireGroup.style.opacity = 0.22; smokeGroup.style.opacity = 0.35; }
+
+  const capHeight = p.drone.foam ? (p.drone.foam*0.9) : 0;
+  foamClipRect.setAttribute('y', 466 - capHeight);
+  foamClipRect.setAttribute('height', capHeight);
+  const crestY = 466 - capHeight;
+  crestBubbles.forEach(el=>el.setAttribute('cy', crestY));
+  foamCrestGroup.style.opacity = p.drone.foam ? 1 : 0;
+
+  // panel
+  document.getElementById('p-eyebrow').textContent = p.eyebrow;
+  document.getElementById('p-title').textContent = p.title;
+  document.getElementById('p-sub').textContent = p.sub;
+  const grid = document.getElementById('p-grid');
+  grid.innerHTML = p.rows.map(r=>`<div class="req-row"><div class="k mono">${r[0]}</div><div class="v">${r[1]}</div></div>`).join('');
+  const cal = document.getElementById('p-callout');
+  cal.className = 'callout' + (p.callout.ok ? ' ok':'');
+  cal.innerHTML = p.callout.html;
+
+  // phase bar state
+  segs.forEach((s,i)=>{
+    s.classList.toggle('active', i===idx);
+    s.classList.toggle('done', i<idx);
+    const bar_i = s.querySelector('i');
+    if(i<idx){ bar_i.style.transition='none'; bar_i.style.width='100%'; }
+    if(i>idx){ bar_i.style.transition='none'; bar_i.style.width='0%'; }
+    if(i===idx){
+      bar_i.style.transition='none';
+      bar_i.style.width='0%';
+      void bar_i.offsetWidth;
+      bar_i.style.transition = `width ${PHASE_MS[idx]}ms linear`;
+      bar_i.style.width='100%';
+    }
+  });
+}
+
+// initial paint at phase 0's position, before the first flight begins
+setDronePosition(droneX, droneY);
+
+let current = 0;
+function runPhase(){
+  applyPhase(PHASES[current], current);
+  setTimeout(()=>{
+    current = (current+1) % PHASES.length;
+    runPhase();
+  }, PHASE_MS[current]);
+}
+runPhase();
+</script>
+
+</body>
+</html>
